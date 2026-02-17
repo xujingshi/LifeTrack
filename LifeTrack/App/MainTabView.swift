@@ -19,19 +19,26 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
+            QuickNoteView()
+                .tabItem {
+                    Image(systemName: "bolt.fill")
+                    Text("咻")
+                }
+                .tag(2)
+
             DiaryListView()
                 .tabItem {
                     Image(systemName: "book")
                     Text("日记")
                 }
-                .tag(2)
+                .tag(3)
 
             ProfileView()
                 .tabItem {
                     Image(systemName: "person.circle")
                     Text("我的")
                 }
-                .tag(3)
+                .tag(4)
         }
     }
 }

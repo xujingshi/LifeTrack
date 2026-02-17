@@ -4,38 +4,112 @@ import Foundation
 struct Plan: Codable, Identifiable {
     let id: Int
     let userId: Int
-    let title: String
-    let description: String?
-    let dueDate: String?
-    let priority: Int
-    let status: Int
+    let name: String
+    let description: String
+    let icon: String
+    let color: String
+    let isArchived: Bool
     let createdAt: String
     let updatedAt: String
+    var tasks: [PlanTask]?
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
-        case title
+        case name
         case description
-        case dueDate = "due_date"
-        case priority
-        case status
+        case icon
+        case color
+        case isArchived = "is_archived"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
-    }
-
-    // 优先级枚举
-    var priorityLevel: PlanPriority {
-        PlanPriority(rawValue: priority) ?? .low
-    }
-
-    // 状态枚举
-    var statusLevel: PlanStatus {
-        PlanStatus(rawValue: status) ?? .todo
+        case tasks
     }
 }
 
-enum PlanPriority: Int, CaseIterable {
+// MARK: - 带进度的规划
+struct PlanWithProgress: Codable, Identifiable {
+    let id: Int
+    let userId: Int
+    let name: String
+    let description: String
+    let icon: String
+    let color: String
+    let isArchived: Bool
+    let createdAt: String
+    let updatedAt: String
+    let totalTasks: Int
+    let completedTasks: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case description
+        case icon
+        case color
+        case isArchived = "is_archived"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case totalTasks = "total_tasks"
+        case completedTasks = "completed_tasks"
+    }
+
+    var progress: Double {
+        guard totalTasks > 0 else { return 0 }
+        return Double(completedTasks) / Double(totalTasks)
+    }
+}
+
+// MARK: - 任务模型
+struct PlanTask: Codable, Identifiable {
+    let id: Int
+    let planId: Int
+    let parentId: Int?
+    let userId: Int
+    let title: String
+    let description: String
+    let priority: Int
+    let status: Int
+    let dueDate: String?
+    let completedAt: String?
+    let sortOrder: Int
+    let createdAt: String
+    let updatedAt: String
+    var subTasks: [PlanTask]?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case planId = "plan_id"
+        case parentId = "parent_id"
+        case userId = "user_id"
+        case title
+        case description
+        case priority
+        case status
+        case dueDate = "due_date"
+        case completedAt = "completed_at"
+        case sortOrder = "sort_order"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case subTasks = "sub_tasks"
+    }
+
+    var priorityLevel: TaskPriority {
+        TaskPriority(rawValue: priority) ?? .low
+    }
+
+    var statusLevel: TaskStatus {
+        TaskStatus(rawValue: status) ?? .todo
+    }
+
+    var isCompleted: Bool {
+        status == TaskStatus.done.rawValue
+    }
+}
+
+// MARK: - 任务优先级
+enum TaskPriority: Int, CaseIterable {
     case low = 0
     case medium = 1
     case high = 2
@@ -57,7 +131,8 @@ enum PlanPriority: Int, CaseIterable {
     }
 }
 
-enum PlanStatus: Int, CaseIterable {
+// MARK: - 任务状态
+enum TaskStatus: Int, CaseIterable {
     case todo = 0
     case inProgress = 1
     case done = 2
@@ -79,33 +154,76 @@ enum PlanStatus: Int, CaseIterable {
     }
 }
 
+// 保留旧的枚举名以兼容其他代码
+typealias PlanPriority = TaskPriority
+typealias PlanStatus = TaskStatus
+
 // MARK: - 请求模型
+
+// 创建规划请求
 struct CreatePlanRequest: Codable {
-    let title: String
+    let name: String
     let description: String?
-    let dueDate: String?
-    let priority: Int
+    let icon: String?
+    let color: String?
+}
+
+// 更新规划请求
+struct UpdatePlanRequest: Codable {
+    let name: String?
+    let description: String?
+    let icon: String?
+    let color: String?
+    let isArchived: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case title
+        case name
         case description
-        case dueDate = "due_date"
-        case priority
+        case icon
+        case color
+        case isArchived = "is_archived"
     }
 }
 
-struct UpdatePlanRequest: Codable {
+// 创建任务请求
+struct CreateTaskRequest: Codable {
+    let planId: Int
+    let parentId: Int?
+    let title: String
+    let description: String?
+    let priority: Int
+    let dueDate: String?
+
+    enum CodingKeys: String, CodingKey {
+        case planId = "plan_id"
+        case parentId = "parent_id"
+        case title
+        case description
+        case priority
+        case dueDate = "due_date"
+    }
+}
+
+// 更新任务请求
+struct UpdateTaskRequest: Codable {
     let title: String?
     let description: String?
-    let dueDate: String?
     let priority: Int?
     let status: Int?
+    let dueDate: String?
+    let sortOrder: Int?
 
     enum CodingKeys: String, CodingKey {
         case title
         case description
-        case dueDate = "due_date"
         case priority
         case status
+        case dueDate = "due_date"
+        case sortOrder = "sort_order"
     }
+}
+
+// 更新任务状态请求
+struct UpdateTaskStatusRequest: Codable {
+    let status: Int
 }

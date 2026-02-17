@@ -7,19 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		019F478C0FFA0B1190F7EC7A /* QuickNoteService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC069F2F86AA3883C61048E /* QuickNoteService.swift */; };
+		DATEUTILS001BUILDFILE /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = DATEUTILS002FILEREF /* DateUtils.swift */; };
 		24212D50616EE76596AB782C /* LifeTrackApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2A8EF554AB46453B6B34AEC /* LifeTrackApp.swift */; };
+		260B331A4EA02C38F431FF56 /* CheckInStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECFAA574BD20FC0CEC7845EC /* CheckInStatisticsView.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* CheckInOverallStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6E7F8091A2B3C4D5E6F7081 /* CheckInOverallStatisticsView.swift */; };
 		3748846393C2E1D5EF3EC1A3 /* PlanListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64526F29D19A35D72C675E38 /* PlanListView.swift */; };
 		4BBFAE78F57C1B26E093B75A /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6990F4EE5A559EFE7A910C75 /* User.swift */; };
 		5679A81C05A85EBB4758FFF0 /* DiaryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2904FFAE3D2FD57DC0CD206 /* DiaryListView.swift */; };
 		5957DA7E6CBB19D6854B7338 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8412846695D1BDC4017A0B6 /* AuthManager.swift */; };
 		598787A284A04553740616B6 /* DiaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB7658C567BC12708D82E978 /* DiaryService.swift */; };
 		63F4616C57D6649102C20738 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881921D1934B7D9405CA6F83 /* APIService.swift */; };
+		67ADD1306D2215D5B01F3CF7 /* QuickNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1702E0A518990ECF4C58FD /* QuickNoteView.swift */; };
 		7242AABB45CB52DA50D334A9 /* APIResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8330AEAB8D9DD55854EA00FB /* APIResponse.swift */; };
 		7A546858AD80ADF9E58A2D03 /* Plan.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7DFEC3E54880601EE4F129 /* Plan.swift */; };
 		8454D08F03D3F03FDF8F6568 /* CheckInService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5B802561CCA5B1A528181F /* CheckInService.swift */; };
 		851135D8895D265E9144F023 /* PlanService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EEFB7BB3F42107F1202BF36 /* PlanService.swift */; };
 		87DEBDA3714647B9374F48EE /* CheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103132FB188144985DD2E27F /* CheckIn.swift */; };
 		9258594E2DC7BA1712993C31 /* Diary.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB9E49E676866B693D45BAF /* Diary.swift */; };
+		A9ABE87964690D3778D8C8CA /* QuickNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = C854D107B00E06F03A4C3485 /* QuickNote.swift */; };
 		B121A6A88E74F1E400C797CA /* CheckInItemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C89EA8CF7C39137FB911B15 /* CheckInItemDetailView.swift */; };
 		D6B628ACC074BCAFEABFCA89 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B308EF24DE7DB699B8761237 /* MainTabView.swift */; };
 		DB15720397E57BE705062015 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E850118566D2BB66BE42379 /* LoginView.swift */; };
@@ -30,9 +36,11 @@
 
 /* Begin PBXFileReference section */
 		1008C90EA6A610818844A19C /* LifeTrack.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LifeTrack.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DATEUTILS002FILEREF /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
 		103132FB188144985DD2E27F /* CheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckIn.swift; sourceTree = "<group>"; };
 		1E850118566D2BB66BE42379 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		4C89EA8CF7C39137FB911B15 /* CheckInItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInItemDetailView.swift; sourceTree = "<group>"; };
+		4EC069F2F86AA3883C61048E /* QuickNoteService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteService.swift; sourceTree = "<group>"; };
 		64526F29D19A35D72C675E38 /* PlanListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanListView.swift; sourceTree = "<group>"; };
 		6990F4EE5A559EFE7A910C75 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		69EA779E4BC9A2AE92865707 /* CheckInCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInCalendarView.swift; sourceTree = "<group>"; };
@@ -45,8 +53,12 @@
 		BA7DFEC3E54880601EE4F129 /* Plan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Plan.swift; sourceTree = "<group>"; };
 		BEB9E49E676866B693D45BAF /* Diary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diary.swift; sourceTree = "<group>"; };
 		C2A8EF554AB46453B6B34AEC /* LifeTrackApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifeTrackApp.swift; sourceTree = "<group>"; };
+		C854D107B00E06F03A4C3485 /* QuickNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNote.swift; sourceTree = "<group>"; };
+		CA1702E0A518990ECF4C58FD /* QuickNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickNoteView.swift; sourceTree = "<group>"; };
 		D8412846695D1BDC4017A0B6 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
 		E2904FFAE3D2FD57DC0CD206 /* DiaryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryListView.swift; sourceTree = "<group>"; };
+		D6E7F8091A2B3C4D5E6F7081 /* CheckInOverallStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInOverallStatisticsView.swift; sourceTree = "<group>"; };
+		ECFAA574BD20FC0CEC7845EC /* CheckInStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInStatisticsView.swift; sourceTree = "<group>"; };
 		F35029D67F5C5FEBEE7DE509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		FB7658C567BC12708D82E978 /* DiaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiaryService.swift; sourceTree = "<group>"; };
 		FF3CBB182B4283310646134F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -68,6 +80,7 @@
 				103132FB188144985DD2E27F /* CheckIn.swift */,
 				BEB9E49E676866B693D45BAF /* Diary.swift */,
 				BA7DFEC3E54880601EE4F129 /* Plan.swift */,
+				C854D107B00E06F03A4C3485 /* QuickNote.swift */,
 				6990F4EE5A559EFE7A910C75 /* User.swift */,
 			);
 			path = Models;
@@ -81,17 +94,10 @@
 				F59AB9B1F97357676CE1D58B /* App */,
 				2CBF78F0F3BDAF91F5BB84CB /* Models */,
 				E77BEF0E0D7731845206692A /* Services */,
-				3D0707FD0EBD8A6D5BC26E33 /* Utils */,
+				UTILSGROUP0001 /* Utils */,
 				F69CF3354ADBAADE7A1901C0 /* Views */,
 			);
 			path = LifeTrack;
-			sourceTree = "<group>";
-		};
-		3D0707FD0EBD8A6D5BC26E33 /* Utils */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Utils;
 			sourceTree = "<group>";
 		};
 		5591ACF1C1993C5DA09F8588 /* Auth */ = {
@@ -100,6 +106,14 @@
 				1E850118566D2BB66BE42379 /* LoginView.swift */,
 			);
 			path = Auth;
+			sourceTree = "<group>";
+		};
+		560987F322D72D14EEF3D868 /* QuickNote */ = {
+			isa = PBXGroup;
+			children = (
+				CA1702E0A518990ECF4C58FD /* QuickNoteView.swift */,
+			);
+			path = QuickNote;
 			sourceTree = "<group>";
 		};
 		5A75027BB18EA4C6FC57EADF /* Diary */ = {
@@ -138,6 +152,8 @@
 			children = (
 				69EA779E4BC9A2AE92865707 /* CheckInCalendarView.swift */,
 				4C89EA8CF7C39137FB911B15 /* CheckInItemDetailView.swift */,
+				D6E7F8091A2B3C4D5E6F7081 /* CheckInOverallStatisticsView.swift */,
+				ECFAA574BD20FC0CEC7845EC /* CheckInStatisticsView.swift */,
 				898210075CC1B7031ECEFA50 /* CheckInView.swift */,
 			);
 			path = CheckIn;
@@ -151,6 +167,7 @@
 				7B5B802561CCA5B1A528181F /* CheckInService.swift */,
 				FB7658C567BC12708D82E978 /* DiaryService.swift */,
 				9EEFB7BB3F42107F1202BF36 /* PlanService.swift */,
+				4EC069F2F86AA3883C61048E /* QuickNoteService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -172,8 +189,17 @@
 				989827EFE310701DBFDE603C /* Components */,
 				5A75027BB18EA4C6FC57EADF /* Diary */,
 				1F8ABB8007AA869841A54E97 /* Plan */,
+				560987F322D72D14EEF3D868 /* QuickNote */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		UTILSGROUP0001 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				DATEUTILS002FILEREF /* DateUtils.swift */,
+			);
+			path = Utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -249,11 +275,14 @@
 			files = (
 				7242AABB45CB52DA50D334A9 /* APIResponse.swift in Sources */,
 				63F4616C57D6649102C20738 /* APIService.swift in Sources */,
+				DATEUTILS001BUILDFILE /* DateUtils.swift in Sources */,
 				5957DA7E6CBB19D6854B7338 /* AuthManager.swift in Sources */,
 				87DEBDA3714647B9374F48EE /* CheckIn.swift in Sources */,
 				ED6D1B0CEDB4756846679CE8 /* CheckInCalendarView.swift in Sources */,
 				B121A6A88E74F1E400C797CA /* CheckInItemDetailView.swift in Sources */,
 				8454D08F03D3F03FDF8F6568 /* CheckInService.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* CheckInOverallStatisticsView.swift in Sources */,
+				260B331A4EA02C38F431FF56 /* CheckInStatisticsView.swift in Sources */,
 				E3CAA179B37CC598F16685E4 /* CheckInView.swift in Sources */,
 				9258594E2DC7BA1712993C31 /* Diary.swift in Sources */,
 				5679A81C05A85EBB4758FFF0 /* DiaryListView.swift in Sources */,
@@ -264,6 +293,9 @@
 				7A546858AD80ADF9E58A2D03 /* Plan.swift in Sources */,
 				3748846393C2E1D5EF3EC1A3 /* PlanListView.swift in Sources */,
 				851135D8895D265E9144F023 /* PlanService.swift in Sources */,
+				A9ABE87964690D3778D8C8CA /* QuickNote.swift in Sources */,
+				019F478C0FFA0B1190F7EC7A /* QuickNoteService.swift in Sources */,
+				67ADD1306D2215D5B01F3CF7 /* QuickNoteView.swift in Sources */,
 				4BBFAE78F57C1B26E093B75A /* User.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

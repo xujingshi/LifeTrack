@@ -92,4 +92,22 @@ class CheckInService {
     func getStatistics() async throws -> CheckInStatistics {
         return try await APIService.shared.request(endpoint: "/checkin/statistics")
     }
+
+    // MARK: - 上传打卡图片
+    func uploadImage(imageData: Data) async throws -> String {
+        let response = try await APIService.shared.uploadCheckinImage(imageData: imageData)
+        return response.imageUrl
+    }
+
+    // MARK: - 获取详细统计
+    func getDetailedStatistics(itemId: Int, period: String) async throws -> DetailedStatistics {
+        let endpoint = "/checkin/items/\(itemId)/statistics?period=\(period)"
+        return try await APIService.shared.request(endpoint: endpoint)
+    }
+
+    // MARK: - 获取综合统计
+    func getOverallStatistics(period: String) async throws -> OverallStatistics {
+        let endpoint = "/checkin/statistics/overall?period=\(period)"
+        return try await APIService.shared.request(endpoint: endpoint)
+    }
 }

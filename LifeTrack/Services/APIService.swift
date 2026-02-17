@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private let logger = Logger(subsystem: "com.xujingshi.LifeTrack", category: "APIService")
 
 // MARK: - API 服务
 class APIService {
@@ -143,6 +146,76 @@ class APIService {
 
         let decoder = JSONDecoder()
         let apiResponse = try decoder.decode(APIResponse<DiaryImage>.self, from: data)
+
+        if apiResponse.code != 0 {
+            throw APIError.serverError(apiResponse.message)
+        }
+
+        guard let responseData = apiResponse.data else {
+            throw APIError.noData
+        }
+
+        return responseData
+    }
+
+    // MARK: - 上传打卡图片
+    func uploadCheckinImage(imageData: Data) async throws -> CheckInImageResponse {
+        guard let url = URL(string: APIConfig.fullURL + "/checkin/upload") else {
+            throw APIError.invalidURL
+        }
+
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        if let token = token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            logger.debug("uploadCheckinImage: token exists")
+        } else {
+            logger.warning("uploadCheckinImage: NO TOKEN - user not logged in!")
+        }
+
+        let filename = "checkin_\(Int(Date().timeIntervalSince1970)).jpg"
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.networkError(NSError(domain: "", code: -1))
+        }
+
+        // 调试：打印响应数据
+        logger.debug("uploadCheckinImage statusCode: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            logger.debug("uploadCheckinImage response: \(responseString)")
+        }
+
+        if httpResponse.statusCode == 401 {
+            throw APIError.unauthorized
+        }
+
+        // 检查状态码
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw APIError.serverError("HTTP \(httpResponse.statusCode): \(errorMsg)")
+        }
+
+        let decoder = JSONDecoder()
+        let apiResponse: APIResponse<CheckInImageResponse>
+        do {
+            apiResponse = try decoder.decode(APIResponse<CheckInImageResponse>.self, from: data)
+        } catch {
+            logger.error("uploadCheckinImage decode error: \(error)")
+            throw APIError.serverError("JSON解码失败: \(error.localizedDescription)")
+        }
 
         if apiResponse.code != 0 {
             throw APIError.serverError(apiResponse.message)
