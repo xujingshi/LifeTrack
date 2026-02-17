@@ -780,7 +780,6 @@ struct AddCheckInItemView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedWeekdays: Set<Int> = []  // 1=周一, 7=周日
-    @State private var intervalDays: Int = 2  // 间隔天数
 
     var onAdd: (CheckInItem) -> Void
 
@@ -823,7 +822,8 @@ struct AddCheckInItemView: View {
 
                 Section {
                     Picker("重复规则", selection: $repeatType) {
-                        ForEach(RepeatType.allCases, id: \.rawValue) { type in
+                        // 过滤掉间隔天数选项
+                        ForEach(RepeatType.allCases.filter { $0 != .interval }, id: \.rawValue) { type in
                             Text(type.title).tag(type)
                         }
                     }
@@ -850,11 +850,6 @@ struct AddCheckInItemView: View {
                             }
                         }
                         .padding(.vertical, 4)
-                    }
-
-                    // 间隔天数输入
-                    if repeatType == .interval {
-                        Stepper("每隔 \(intervalDays) 天", value: $intervalDays, in: 2...30)
                     }
                 } header: {
                     Text("重复规则")
@@ -923,7 +918,7 @@ struct AddCheckInItemView: View {
             remind: remind,
             repeatType: repeatType.rawValue,
             repeatDays: repeatDays,
-            intervalDays: repeatType == .interval ? intervalDays : nil,
+            intervalDays: nil,
             checkType: checkType.rawValue,
             valueUnit: checkType == .withValue ? valueUnit : nil
         )

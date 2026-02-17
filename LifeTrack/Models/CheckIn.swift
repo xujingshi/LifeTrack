@@ -105,7 +105,7 @@ enum CheckType: Int, CaseIterable {
         switch self {
         case .normal: return "checkmark.circle"
         case .withImage: return "photo"
-        case .withValue: return "number"
+        case .withValue: return "chart.bar.fill"
         }
     }
 }
