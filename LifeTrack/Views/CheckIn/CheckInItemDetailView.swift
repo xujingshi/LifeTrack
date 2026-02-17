@@ -437,11 +437,11 @@ struct ItemCalendarGrid: View {
                         isBeforeCreation: isBeforeCreation,
                         isAvailable: isAvailable,
                         isSelected: isSelected,
+                        onTap: {
+                            selectedDate = date
+                        },
                         onImageTap: onImageTap
                     )
-                    .onTapGesture {
-                        selectedDate = date
-                    }
                 } else {
                     Color.clear
                         .frame(height: 48)
@@ -489,7 +489,8 @@ struct ItemDayCell: View {
     let isBeforeCreation: Bool  // 打卡项创建之前的日期
     let isAvailable: Bool  // 根据重复规则是否需要打卡
     var isSelected: Bool = false  // 是否被选中
-    var onImageTap: ((String) -> Void)? = nil  // 图片点击回调
+    var onTap: (() -> Void)? = nil  // 点击选中回调
+    var onImageTap: ((String) -> Void)? = nil  // 图片点击回调（长按触发）
 
     private let calendar = Calendar.current
 
@@ -568,9 +569,6 @@ struct ItemDayCell: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
                 .cornerRadius(8)
-                .onTapGesture {
-                    onImageTap?(imageUrl)
-                }
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(backgroundColor)
@@ -607,6 +605,16 @@ struct ItemDayCell: View {
         }
         .frame(height: 48)
         .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())  // 确保整个区域可点击
+        .onTapGesture {
+            onTap?()
+        }
+        .onLongPressGesture {
+            // 长按查看图片大图
+            if hasImage, let imageUrl = record?.imageUrl {
+                onImageTap?(imageUrl)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(isToday && !isSelected ? Color.blue : Color.clear, lineWidth: 3)
