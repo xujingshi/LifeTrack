@@ -1,16 +1,78 @@
 import SwiftUI
 
+// MARK: - 全屏图片预览
+struct FullScreenImageView: View {
+    let imageUrl: String
+    @Environment(\.dismiss) var dismiss
+    @State private var scale: CGFloat = 1.0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            AsyncImage(url: URL(string: APIConfig.baseURL + imageUrl)) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .gesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    scale = value
+                                }
+                                .onEnded { _ in
+                                    withAnimation {
+                                        scale = max(1.0, min(scale, 3.0))
+                                    }
+                                }
+                        )
+                case .failure:
+                    VStack {
+                        Image(systemName: "photo")
+                            .font(.largeTitle)
+                            .foregroundColor(.gray)
+                        Text("加载失败")
+                            .foregroundColor(.gray)
+                    }
+                default:
+                    ProgressView()
+                        .tint(.white)
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding()
+        }
+        .onTapGesture(count: 2) {
+            withAnimation {
+                scale = scale > 1.0 ? 1.0 : 2.0
+            }
+        }
+    }
+}
+
 // MARK: - 单个打卡项详情视图（含日历）
 struct CheckInItemDetailView: View {
     let item: CheckInItem
     @Environment(\.dismiss) var dismiss
 
     @State private var currentMonth = Date()
+    @State private var selectedDate = Date()  // 日历选中的日期
     @State private var monthRecords: [String: CheckInRecord] = [:] // 日期 -> 记录的映射
     @State private var statistics: ItemStatistics?
     @State private var isLoading = false
     @State private var showDeleteAlert = false
     @State private var showStatistics = false
+    @State private var fullScreenImageUrl: String? = nil  // 全屏查看的图片
     var onDelete: (() -> Void)? = nil
 
     private let calendar = Calendar.current
@@ -35,17 +97,36 @@ struct CheckInItemDetailView: View {
                 // 星期标题
                 WeekdayHeader()
 
-                // 单项日历网格
+                // 单项日历网格（支持点击选择日期）
                 ItemCalendarGrid(
                     currentMonth: currentMonth,
+                    selectedDate: $selectedDate,
                     records: monthRecords,
-                    item: item
+                    item: item,
+                    onImageTap: { imageUrl in
+                        fullScreenImageUrl = imageUrl
+                    }
                 )
 
-                // 打卡记录列表
-                RecentRecordsSection(item: item)
+                // 选中日期的打卡记录
+                SelectedDateRecordsSection(
+                    item: item,
+                    selectedDate: selectedDate,
+                    record: monthRecords[dateFormatter.string(from: selectedDate)],
+                    onImageTap: { imageUrl in
+                        fullScreenImageUrl = imageUrl
+                    }
+                )
             }
             .padding()
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { fullScreenImageUrl != nil },
+            set: { if !$0 { fullScreenImageUrl = nil } }
+        )) {
+            if let imageUrl = fullScreenImageUrl {
+                FullScreenImageView(imageUrl: imageUrl)
+            }
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(item.name)
@@ -272,8 +353,10 @@ struct StatItem: View {
 // MARK: - 单项日历网格
 struct ItemCalendarGrid: View {
     let currentMonth: Date
+    @Binding var selectedDate: Date  // 选中的日期
     let records: [String: CheckInRecord]  // 日期 -> 记录的映射
     let item: CheckInItem  // 打卡项（包含创建日期和重复规则）
+    var onImageTap: ((String) -> Void)? = nil  // 图片点击回调
 
     private let calendar = Calendar.current
     private let dateFormatter: DateFormatter = {
@@ -344,6 +427,7 @@ struct ItemCalendarGrid: View {
                     let dateStr = dateFormatter.string(from: date)
                     let isBeforeCreation = isDateBeforeCreation(date)
                     let isAvailable = isItemAvailableOn(date: date)
+                    let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
                     ItemDayCell(
                         date: date,
                         record: records[dateStr],
@@ -351,8 +435,13 @@ struct ItemCalendarGrid: View {
                         isToday: calendar.isDateInToday(date),
                         isFuture: date > Date(),
                         isBeforeCreation: isBeforeCreation,
-                        isAvailable: isAvailable
+                        isAvailable: isAvailable,
+                        isSelected: isSelected,
+                        onImageTap: onImageTap
                     )
+                    .onTapGesture {
+                        selectedDate = date
+                    }
                 } else {
                     Color.clear
                         .frame(height: 48)
@@ -399,6 +488,8 @@ struct ItemDayCell: View {
     let isFuture: Bool
     let isBeforeCreation: Bool  // 打卡项创建之前的日期
     let isAvailable: Bool  // 根据重复规则是否需要打卡
+    var isSelected: Bool = false  // 是否被选中
+    var onImageTap: ((String) -> Void)? = nil  // 图片点击回调
 
     private let calendar = Calendar.current
 
@@ -423,6 +514,10 @@ struct ItemDayCell: View {
     }
 
     var backgroundColor: Color {
+        // 选中状态优先
+        if isSelected {
+            return .blue
+        }
         // 已完成的优先显示绿色（或图片背景）
         if isCompleted {
             return hasImage ? Color.clear : Color.green
@@ -438,7 +533,9 @@ struct ItemDayCell: View {
     }
 
     var textColor: Color {
-        if isCompleted {
+        if isSelected {
+            return .white
+        } else if isCompleted {
             return .white
         } else if isFuture || isBeforeCreation || !isAvailable {
             return .gray
@@ -450,8 +547,8 @@ struct ItemDayCell: View {
     var body: some View {
         ZStack {
             // 背景层
-            if hasImage, let imageUrl = record?.imageUrl {
-                // 图片打卡：显示图片作为背景
+            if hasImage && !isSelected, let imageUrl = record?.imageUrl {
+                // 图片打卡：显示图片作为背景（选中时不显示图片背景）
                 let fullURL = APIConfig.baseURL + imageUrl
                 AsyncImage(url: URL(string: fullURL)) { phase in
                     switch phase {
@@ -471,6 +568,9 @@ struct ItemDayCell: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
                 .cornerRadius(8)
+                .onTapGesture {
+                    onImageTap?(imageUrl)
+                }
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(backgroundColor)
@@ -482,26 +582,26 @@ struct ItemDayCell: View {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: 14, weight: isToday ? .bold : .medium))
                     .foregroundColor(textColor)
-                    .shadow(color: hasImage ? .black.opacity(0.7) : .clear, radius: 1)
+                    .shadow(color: (hasImage && !isSelected) ? .black.opacity(0.7) : .clear, radius: 1)
 
                 // 根据类型显示不同内容
                 if let (value, unit) = valueInfo {
                     // 数值打卡：显示数值
                     Text("\(String(format: "%.0f", value))\(unit)")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundColor(isSelected ? .white : .white)
                         .shadow(color: .black.opacity(0.3), radius: 1)
                 } else if isCompleted {
                     // 已完成显示对勾
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(hasImage ? .white : .white.opacity(0.9))
-                        .shadow(color: hasImage ? .black.opacity(0.5) : .clear, radius: 1)
+                        .foregroundColor(isSelected ? .white : (hasImage ? .white : .white.opacity(0.9)))
+                        .shadow(color: (hasImage && !isSelected) ? .black.opacity(0.5) : .clear, radius: 1)
                 } else if shouldShowAsIncomplete {
                     // 未完成但应该打卡的日期显示叉
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(.red.opacity(0.6))
+                        .foregroundColor(isSelected ? .white.opacity(0.7) : .red.opacity(0.6))
                 }
             }
         }
@@ -509,124 +609,141 @@ struct ItemDayCell: View {
         .frame(maxWidth: .infinity)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isToday ? Color.blue : Color.clear, lineWidth: 3)
+                .stroke(isToday && !isSelected ? Color.blue : Color.clear, lineWidth: 3)
         )
     }
 }
 
-// MARK: - 最近打卡记录
-struct RecentRecordsSection: View {
+// MARK: - 选中日期的打卡记录
+struct SelectedDateRecordsSection: View {
     let item: CheckInItem
+    let selectedDate: Date
+    let record: CheckInRecord?  // 选中日期的打卡记录
+    var onImageTap: ((String) -> Void)? = nil
 
-    @State private var records: [CheckInRecord] = []
+    private let calendar = Calendar.current
+
+    private var dateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M月d日 EEEE"
+        formatter.locale = Locale(identifier: "zh_CN")
+
+        if calendar.isDateInToday(selectedDate) {
+            return "今天"
+        } else if calendar.isDateInYesterday(selectedDate) {
+            return "昨天"
+        }
+        return formatter.string(from: selectedDate)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("最近打卡")
+            Text(dateString)
                 .font(.headline)
 
-            if records.isEmpty {
-                Text("暂无打卡记录")
-                    .foregroundColor(.gray)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else {
-                ForEach(records.prefix(10)) { record in
+            if let record = record {
+                // 有打卡记录
+                VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
-                        // 状态图标
                         Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
                             .foregroundColor(.green)
 
-                        // 日期
-                        Text(formatDate(record.checkDate))
+                        Text("已打卡")
                             .font(.subheadline)
-
-                        // 数值或图片缩略图（紧跟日期）
-                        if item.checkTypeEnum == .withValue, let value = record.value {
-                            Text("\(String(format: "%.1f", value)) \(item.valueUnit ?? "")")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.green)
-                        } else if item.checkTypeEnum == .withImage,
-                                  let imageUrl = record.imageUrl, !imageUrl.isEmpty {
-                            AsyncImage(url: URL(string: APIConfig.baseURL + imageUrl)) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                case .failure:
-                                    Image(systemName: "photo")
-                                        .foregroundColor(.gray)
-                                default:
-                                    ProgressView()
-                                }
-                            }
-                            .frame(width: 28, height: 28)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
+                            .foregroundColor(.green)
 
                         Spacer()
 
-                        // 打卡时间（最右侧）
                         if let checkedAt = record.checkedAt {
                             Text(formatTime(checkedAt))
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
                     }
-                    .padding(.vertical, 4)
+
+                    // 数值显示
+                    if item.checkTypeEnum == .withValue, let value = record.value {
+                        HStack {
+                            Text("记录数值")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text("\(String(format: "%.1f", value)) \(item.valueUnit ?? "")")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.blue)
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    // 图片显示
+                    if item.checkTypeEnum == .withImage,
+                       let imageUrl = record.imageUrl, !imageUrl.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("打卡图片")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+
+                            AsyncImage(url: URL(string: APIConfig.baseURL + imageUrl)) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(maxHeight: 200)
+                                        .clipped()
+                                        .cornerRadius(8)
+                                        .onTapGesture {
+                                            onImageTap?(imageUrl)
+                                        }
+                                case .failure:
+                                    HStack {
+                                        Image(systemName: "photo")
+                                            .foregroundColor(.gray)
+                                        Text("图片加载失败")
+                                            .foregroundColor(.gray)
+                                    }
+                                default:
+                                    ProgressView()
+                                        .frame(height: 100)
+                                }
+                            }
+                        }
+                    }
+
+                    // 备注
+                    if let note = record.note, !note.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("备注")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Text(note)
+                                .font(.body)
+                        }
+                        .padding(.top, 4)
+                    }
                 }
+            } else {
+                // 无打卡记录
+                HStack {
+                    Image(systemName: "circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(.gray)
+                    Text("未打卡")
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding()
             }
         }
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5)
-        .task {
-            await loadRecords()
-        }
-    }
-
-    private func loadRecords() async {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let endDate = formatter.string(from: Date())
-        let startDate = formatter.string(from: Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date())
-
-        do {
-            let response = try await CheckInService.shared.getRecords(itemId: item.id, startDate: startDate, endDate: endDate)
-            records = response.list.sorted { $0.checkDate > $1.checkDate }
-        } catch {
-            print("加载记录失败: \(error)")
-        }
-    }
-
-    private func formatDate(_ dateString: String) -> String {
-        // 解析日期字符串 (yyyy-MM-dd 或带时间的格式)
-        let cleanDate = String(dateString.prefix(10))
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: cleanDate) else {
-            return dateString
-        }
-
-        let calendar = Calendar.current
-        if calendar.isDateInToday(date) {
-            return "今天"
-        } else if calendar.isDateInYesterday(date) {
-            return "昨天"
-        } else if calendar.isDate(date, equalTo: Date(), toGranularity: .year) {
-            formatter.dateFormat = "M月d日"
-            return formatter.string(from: date)
-        } else {
-            formatter.dateFormat = "yyyy年M月d日"
-            return formatter.string(from: date)
-        }
     }
 
     private func formatTime(_ dateString: String) -> String {
-        // 尝试解析 ISO 8601 格式 (2026-02-17T08:30:00Z)
         let isoFormatter = ISO8601DateFormatter()
         if let date = isoFormatter.date(from: dateString) {
             let formatter = DateFormatter()
@@ -634,7 +751,6 @@ struct RecentRecordsSection: View {
             return formatter.string(from: date)
         }
 
-        // 尝试解析带时区的格式 (2026-02-17T08:30:00+08:00)
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
         if let date = formatter.date(from: dateString) {
@@ -642,7 +758,6 @@ struct RecentRecordsSection: View {
             return formatter.string(from: date)
         }
 
-        // 简单截取时间部分
         if dateString.count > 11 {
             let start = dateString.index(dateString.startIndex, offsetBy: 11)
             let end = dateString.index(start, offsetBy: 5, limitedBy: dateString.endIndex) ?? dateString.endIndex

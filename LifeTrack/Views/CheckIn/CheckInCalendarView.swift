@@ -10,6 +10,7 @@ struct CheckInCalendarView: View {
     @State private var items: [CheckInItem] = []
     @State private var monthRecords: [String: [CheckInRecord]] = [:] // date -> records
     @State private var isLoading = false
+    @State private var fullScreenImageUrl: String? = nil  // 全屏查看的图片
 
     private let calendar = Calendar.current
     private let dateFormatter: DateFormatter = {
@@ -43,7 +44,10 @@ struct CheckInCalendarView: View {
                     SelectedDateDetail(
                         date: selectedDate,
                         items: items,
-                        records: monthRecords[dateFormatter.string(from: selectedDate)] ?? []
+                        records: monthRecords[dateFormatter.string(from: selectedDate)] ?? [],
+                        onImageTap: { imageUrl in
+                            fullScreenImageUrl = imageUrl
+                        }
                     )
                 }
                 .padding()
@@ -54,6 +58,14 @@ struct CheckInCalendarView: View {
             .task {
                 await loadItems()
                 await loadMonthData()
+            }
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { fullScreenImageUrl != nil },
+            set: { if !$0 { fullScreenImageUrl = nil } }
+        )) {
+            if let imageUrl = fullScreenImageUrl {
+                FullScreenImageView(imageUrl: imageUrl)
             }
         }
         .presentationDetents([.large])
@@ -399,6 +411,7 @@ struct SelectedDateDetail: View {
     let date: Date
     let items: [CheckInItem]
     let records: [CheckInRecord]
+    var onImageTap: ((String) -> Void)? = nil
 
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -570,7 +583,7 @@ struct SelectedDateDetail: View {
                                     .foregroundColor(.green)
                             } else if item.checkTypeEnum == .withImage,
                                       let imageUrl = record.imageUrl, !imageUrl.isEmpty {
-                                // 图片缩略图
+                                // 图片缩略图（可点击查看大图）
                                 AsyncImage(url: URL(string: APIConfig.baseURL + imageUrl)) { phase in
                                     switch phase {
                                     case .success(let image):
@@ -586,6 +599,9 @@ struct SelectedDateDetail: View {
                                 }
                                 .frame(width: 28, height: 28)
                                 .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .onTapGesture {
+                                    onImageTap?(imageUrl)
+                                }
                             }
                         }
 
