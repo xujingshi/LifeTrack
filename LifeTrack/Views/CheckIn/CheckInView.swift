@@ -12,12 +12,10 @@ struct CheckInView: View {
     @State private var selectedDate = Date()
     @State private var currentDateString = "" // 用于检测跨天
 
-    // 数值输入相关
-    @State private var valueInputItem: CheckInItem?
+    // 记录模式输入相关
+    @State private var recordInputItem: CheckInItem?
     @State private var inputValue: String = ""
-
-    // 图片输入相关
-    @State private var imageInputItem: CheckInItem?
+    @State private var inputNote: String = ""
     @State private var selectedPhoto: PhotosPickerItem?
 
     private let calendar = Calendar.current
@@ -260,33 +258,20 @@ struct CheckInView: View {
             .sheet(isPresented: $showCalendar) {
                 CheckInCalendarView()
             }
-            .sheet(item: $valueInputItem) { item in
-                ValueInputSheet(
+            .sheet(item: $recordInputItem) { item in
+                RecordInputSheet(
                     item: item,
                     inputValue: $inputValue,
-                    onSave: { value in
-                        Task {
-                            await doCheckIn(item: item, value: value, imageUrl: nil)
-                        }
-                        valueInputItem = nil
-                    },
-                    onCancel: {
-                        valueInputItem = nil
-                    }
-                )
-            }
-            .sheet(item: $imageInputItem) { item in
-                ImageInputSheet(
-                    item: item,
+                    inputNote: $inputNote,
                     selectedPhoto: $selectedPhoto,
-                    onSave: { imageUrl in
+                    onSave: { value, note, imageUrl in
                         Task {
-                            await doCheckIn(item: item, value: nil, imageUrl: imageUrl)
+                            await doCheckIn(item: item, value: value, note: note, imageUrl: imageUrl)
                         }
-                        imageInputItem = nil
+                        recordInputItem = nil
                     },
                     onCancel: {
-                        imageInputItem = nil
+                        recordInputItem = nil
                     }
                 )
             }
@@ -365,15 +350,12 @@ struct CheckInView: View {
             print("DEBUG: item.name=\(item.name), checkType=\(item.checkType ?? -1), checkTypeEnum=\(item.checkTypeEnum)")
 
             switch item.checkTypeEnum {
-            case .withValue:
-                // 弹出数值输入框
-                print("DEBUG: 显示数值输入框 for \(item.name)")
-                valueInputItem = item
+            case .record:
+                // 弹出记录模式输入框
+                print("DEBUG: 显示记录模式输入框 for \(item.name)")
+                recordInputItem = item
                 inputValue = ""
-            case .withImage:
-                // 弹出图片选择框
-                print("DEBUG: 显示图片选择框 for \(item.name)")
-                imageInputItem = item
+                inputNote = ""
                 selectedPhoto = nil
             case .normal:
                 // 普通打卡
@@ -383,11 +365,11 @@ struct CheckInView: View {
         }
     }
 
-    private func doCheckIn(item: CheckInItem, value: Double?, imageUrl: String? = nil) async {
+    private func doCheckIn(item: CheckInItem, value: Double?, note: String? = nil, imageUrl: String? = nil) async {
         let request = CreateCheckInRecordRequest(
             itemId: item.id,
             checkDate: dateString,
-            note: nil,
+            note: note,
             imageUrl: imageUrl,
             value: value
         )
@@ -775,6 +757,8 @@ struct AddCheckInItemView: View {
     @State private var hasTime = false
     @State private var repeatType: RepeatType = .daily
     @State private var checkType: CheckType = .normal
+    @State private var contentType: ContentType = .text
+    @State private var allowImage = false
     @State private var valueUnit = ""
     @State private var remind = false
     @State private var isLoading = false
@@ -804,9 +788,33 @@ struct AddCheckInItemView: View {
                         .font(.caption)
                         .foregroundColor(.gray)
 
-                    // 数值记录时需要填写单位
-                    if checkType == .withValue {
-                        TextField("数值单位（如 kg、步）", text: $valueUnit)
+                    // 记录模式的配置选项
+                    if checkType == .record {
+                        // 内容类型选择
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("记录内容类型")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+
+                            Picker("内容类型", selection: $contentType) {
+                                ForEach(ContentType.allCases, id: \.rawValue) { type in
+                                    Text(type.title).tag(type)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            Text(contentType.description)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+
+                        // 数值类型需要填写单位
+                        if contentType == .number {
+                            TextField("数值单位（如 kg、步）", text: $valueUnit)
+                        }
+
+                        // 是否允许添加图片
+                        Toggle("允许添加图片", isOn: $allowImage)
                     }
                 }
 
@@ -822,10 +830,11 @@ struct AddCheckInItemView: View {
 
                 Section {
                     Picker("重复规则", selection: $repeatType) {
-                        // 过滤掉间隔天数选项
-                        ForEach(RepeatType.allCases.filter { $0 != .interval }, id: \.rawValue) { type in
-                            Text(type.title).tag(type)
-                        }
+                        // 显示顺序：每天、工作日、自由记录、自定义
+                        Text(RepeatType.daily.title).tag(RepeatType.daily)
+                        Text(RepeatType.weekday.title).tag(RepeatType.weekday)
+                        Text(RepeatType.free.title).tag(RepeatType.free)
+                        Text(RepeatType.custom.title).tag(RepeatType.custom)
                     }
 
                     Text(repeatType.description)
@@ -920,7 +929,9 @@ struct AddCheckInItemView: View {
             repeatDays: repeatDays,
             intervalDays: nil,
             checkType: checkType.rawValue,
-            valueUnit: checkType == .withValue ? valueUnit : nil
+            contentType: checkType == .record ? contentType.rawValue : nil,
+            allowImage: checkType == .record ? allowImage : nil,
+            valueUnit: (checkType == .record && contentType == .number) ? valueUnit : nil
         )
 
         do {
@@ -954,128 +965,155 @@ struct WeekdayButton: View {
     }
 }
 
-// MARK: - 数值输入弹窗
-struct ValueInputSheet: View {
+// MARK: - 记录模式输入弹窗
+struct RecordInputSheet: View {
     let item: CheckInItem
     @Binding var inputValue: String
-    var onSave: (Double) -> Void
-    var onCancel: () -> Void
-
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // 项目名称
-                Text(item.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                // 数值输入
-                HStack(spacing: 12) {
-                    TextField("输入数值", text: $inputValue)
-                        .keyboardType(.decimalPad)
-                        .font(.system(size: 36, weight: .medium))
-                        .multilineTextAlignment(.center)
-                        .focused($isFocused)
-
-                    if let unit = item.valueUnit, !unit.isEmpty {
-                        Text(unit)
-                            .font(.title2)
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("记录数值")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        onCancel()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
-                        if let value = Double(inputValue) {
-                            onSave(value)
-                        }
-                    }
-                    .disabled(Double(inputValue) == nil)
-                }
-            }
-            .onAppear {
-                isFocused = true
-            }
-        }
-        .presentationDetents([.height(280)])
-    }
-}
-
-// MARK: - 图片输入弹窗
-struct ImageInputSheet: View {
-    let item: CheckInItem
+    @Binding var inputNote: String
     @Binding var selectedPhoto: PhotosPickerItem?
-    var onSave: (String) -> Void
+    var onSave: (Double?, String?, String?) -> Void  // (value, note, imageUrl)
     var onCancel: () -> Void
 
     @State private var selectedImage: UIImage?
     @State private var isUploading = false
     @State private var errorMessage: String?
+    @FocusState private var isFocused: Bool
+
+    // 是否可以保存（至少有内容或图片）
+    private var canSave: Bool {
+        if item.needsNumberInput {
+            // 数值类型：需要有数值或图片
+            let hasValue = Double(inputValue) != nil
+            let hasImage = selectedImage != nil
+            return hasValue || (item.canAddImage && hasImage)
+        } else {
+            // 文字类型：需要有文字或图片
+            let hasNote = !inputNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasImage = selectedImage != nil
+            return hasNote || (item.canAddImage && hasImage)
+        }
+    }
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                // 项目名称
-                Text(item.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 根据内容类型显示不同的输入
+                    if item.needsNumberInput {
+                        // 数值输入
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("记录数值")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
 
-                // 图片预览或选择器
-                if let image = selectedImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 300)
-                        .cornerRadius(12)
+                            HStack(spacing: 12) {
+                                TextField("输入数值", text: $inputValue)
+                                    .keyboardType(.decimalPad)
+                                    .font(.system(size: 32, weight: .medium))
+                                    .multilineTextAlignment(.center)
+                                    .focused($isFocused)
 
-                    // 重新选择按钮
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Text("重新选择")
-                            .foregroundColor(.blue)
-                    }
-                } else {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        VStack(spacing: 12) {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.system(size: 48))
-                                .foregroundColor(.blue)
-                            Text("选择图片")
-                                .foregroundColor(.blue)
+                                if let unit = item.valueUnit, !unit.isEmpty {
+                                    Text(unit)
+                                        .font(.title3)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 200)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                    } else {
+                        // 文字输入
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("记录内容")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+
+                            TextEditor(text: $inputNote)
+                                .frame(minHeight: 100)
+                                .padding(8)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .focused($isFocused)
+                        }
+                    }
+
+                    // 图片选择（如果允许）
+                    if item.canAddImage {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("添加图片")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                                Text("(可选)")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+
+                            if let image = selectedImage {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(maxHeight: 200)
+                                        .cornerRadius(12)
+
+                                    // 删除按钮
+                                    Button {
+                                        selectedImage = nil
+                                        selectedPhoto = nil
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                            .background(Color.black.opacity(0.5))
+                                            .clipShape(Circle())
+                                    }
+                                    .padding(8)
+                                }
+
+                                // 重新选择按钮
+                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                    Text("重新选择")
+                                        .font(.subheadline)
+                                        .foregroundColor(.blue)
+                                }
+                            } else {
+                                PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "photo.badge.plus")
+                                            .font(.system(size: 32))
+                                            .foregroundColor(.blue)
+                                        Text("选择图片")
+                                            .font(.subheadline)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 100)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                }
+                            }
+                        }
+                    }
+
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+
+                    // 提示文字
+                    if !canSave {
+                        Text(item.canAddImage ? "请至少输入内容或选择图片" : "请输入内容")
+                            .font(.caption)
+                            .foregroundColor(.orange)
                     }
                 }
-
-                if let error = errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-
-                Spacer()
+                .padding()
             }
-            .padding()
-            .navigationTitle("上传图片")
+            .navigationTitle(item.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1087,21 +1125,24 @@ struct ImageInputSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         Task {
-                            await uploadAndSave()
+                            await saveRecord()
                         }
                     }
-                    .disabled(selectedImage == nil || isUploading)
+                    .disabled(!canSave || isUploading)
                 }
             }
             .overlay {
                 if isUploading {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    ProgressView("上传中...")
+                    ProgressView("保存中...")
                         .padding()
                         .background(Color(.systemBackground))
                         .cornerRadius(12)
                 }
+            }
+            .onAppear {
+                isFocused = true
             }
         }
         .presentationDetents([.medium, .large])
@@ -1112,11 +1153,11 @@ struct ImageInputSheet: View {
         }
     }
 
-    private func loadImage(from item: PhotosPickerItem?) async {
-        guard let item = item else { return }
+    private func loadImage(from photoItem: PhotosPickerItem?) async {
+        guard let photoItem = photoItem else { return }
 
         do {
-            if let data = try await item.loadTransferable(type: Data.self),
+            if let data = try await photoItem.loadTransferable(type: Data.self),
                let uiImage = UIImage(data: data) {
                 selectedImage = uiImage
             }
@@ -1125,24 +1166,39 @@ struct ImageInputSheet: View {
         }
     }
 
-    private func uploadAndSave() async {
-        guard let image = selectedImage,
-              let imageData = image.jpegData(compressionQuality: 0.8) else {
-            errorMessage = "图片处理失败"
-            return
-        }
-
+    private func saveRecord() async {
         isUploading = true
         errorMessage = nil
 
-        do {
-            let imageUrl = try await CheckInService.shared.uploadImage(imageData: imageData)
-            onSave(imageUrl)
-        } catch {
-            errorMessage = "上传失败: \(error)"
+        var imageUrl: String? = nil
+
+        // 如果有图片，先上传
+        if let image = selectedImage,
+           let imageData = image.jpegData(compressionQuality: 0.8) {
+            do {
+                imageUrl = try await CheckInService.shared.uploadImage(imageData: imageData)
+            } catch {
+                errorMessage = "图片上传失败: \(error)"
+                isUploading = false
+                return
+            }
+        }
+
+        // 准备数据
+        var value: Double? = nil
+        var note: String? = nil
+
+        if item.needsNumberInput {
+            value = Double(inputValue)
+        } else {
+            let trimmedNote = inputNote.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedNote.isEmpty {
+                note = trimmedNote
+            }
         }
 
         isUploading = false
+        onSave(value, note, imageUrl)
     }
 }
 

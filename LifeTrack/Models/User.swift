@@ -4,19 +4,19 @@ import Foundation
 struct User: Codable, Identifiable {
     let id: Int
     let username: String
-    let email: String
+    let phone: String
+    let avatarUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, username, phone
+        case avatarUrl = "avatar_url"
+    }
 }
 
 // MARK: - 认证相关请求
-struct LoginRequest: Codable {
-    let email: String
-    let password: String
-}
-
-struct RegisterRequest: Codable {
-    let username: String
-    let email: String
-    let password: String
+struct PhoneLoginRequest: Codable {
+    let phone: String
+    let code: String
 }
 
 // MARK: - Token 响应
@@ -30,4 +30,9 @@ struct TokenResponse: Codable {
         case expiresAt = "expires_at"
         case user
     }
+}
+
+// MARK: - 更新用户资料请求
+struct UpdateProfileRequest: Codable {
+    let username: String
 }

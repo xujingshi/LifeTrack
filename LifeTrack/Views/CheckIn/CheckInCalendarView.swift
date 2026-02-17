@@ -575,13 +575,13 @@ struct SelectedDateDetail: View {
 
                         // 数值或图片缩略图（紧跟标题）
                         if let record = record {
-                            if item.checkTypeEnum == .withValue, let value = record.value {
+                            if item.needsNumberInput, let value = record.value {
                                 // 数值显示
                                 Text("\(String(format: "%.1f", value)) \(item.valueUnit ?? "")")
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.green)
-                            } else if item.checkTypeEnum == .withImage,
+                            } else if item.canAddImage,
                                       let imageUrl = record.imageUrl, !imageUrl.isEmpty {
                                 // 图片缩略图（可点击查看大图）
                                 AsyncImage(url: URL(string: APIConfig.baseURL + imageUrl)) { phase in

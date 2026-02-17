@@ -47,7 +47,7 @@ struct CheckInStatisticsView: View {
                     TrendChartView(trendData: stats.trendData, item: item)
 
                     // 数值分析（仅数值型打卡）
-                    if item.checkTypeEnum == .withValue, stats.avgValue != nil {
+                    if item.needsNumberInput, stats.avgValue != nil {
                         ValueAnalysisCard(statistics: stats, unit: item.valueUnit ?? "")
                     }
 
@@ -186,7 +186,7 @@ struct TrendChartView: View {
             Text("打卡趋势")
                 .font(.headline)
 
-            if item.checkTypeEnum == .withValue {
+            if item.needsNumberInput {
                 // 数值型：折线图
                 Chart(trendData) { point in
                     if let value = point.value {
@@ -352,6 +352,8 @@ struct HabitCard: View {
             repeatDays: nil,
             intervalDays: 1,
             checkType: 0,
+            contentType: nil,
+            allowImage: nil,
             valueUnit: nil,
             isActive: true,
             createdAt: ""

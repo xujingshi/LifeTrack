@@ -2,9 +2,18 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthManager
-    @State private var email = ""
-    @State private var password = ""
-    @State private var showRegister = false
+    @State private var phone = ""
+    @State private var code = ""
+
+    // 验证手机号格式
+    var isPhoneValid: Bool {
+        phone.count == 11 && phone.allSatisfy { $0.isNumber }
+    }
+
+    // 验证码格式
+    var isCodeValid: Bool {
+        code.count == 6
+    }
 
     var body: some View {
         NavigationView {
@@ -27,15 +36,34 @@ struct LoginView: View {
 
                 // 登录表单
                 VStack(spacing: 16) {
-                    TextField("邮箱", text: $email)
-                        .textContentType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .textFieldStyle(.roundedBorder)
+                    HStack {
+                        Text("+86")
+                            .foregroundColor(.gray)
+                            .padding(.leading, 12)
 
-                    SecureField("密码", text: $password)
-                        .textContentType(.password)
-                        .textFieldStyle(.roundedBorder)
+                        TextField("手机号", text: $phone)
+                            .textContentType(.telephoneNumber)
+                            .keyboardType(.phonePad)
+                    }
+                    .padding(.vertical, 10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+
+                    HStack {
+                        TextField("验证码", text: $code)
+                            .textContentType(.oneTimeCode)
+                            .keyboardType(.numberPad)
+                            .padding(.leading, 12)
+
+                        // 提示文本
+                        Text("输入 000000")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .padding(.trailing, 12)
+                    }
+                    .padding(.vertical, 10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
                 }
                 .padding(.horizontal)
 
@@ -49,7 +77,7 @@ struct LoginView: View {
                 // 登录按钮
                 Button {
                     Task {
-                        await authManager.login(email: email, password: password)
+                        await authManager.loginWithPhone(phone: phone, code: code)
                     }
                 } label: {
                     if authManager.isLoading {
@@ -63,118 +91,18 @@ struct LoginView: View {
                             .padding()
                     }
                 }
-                .background(Color.blue)
+                .background(isPhoneValid && isCodeValid ? Color.blue : Color.gray)
                 .foregroundColor(.white)
                 .cornerRadius(10)
                 .padding(.horizontal)
-                .disabled(authManager.isLoading || email.isEmpty || password.isEmpty)
+                .disabled(authManager.isLoading || !isPhoneValid || !isCodeValid)
 
-                // 注册链接
-                Button {
-                    showRegister = true
-                } label: {
-                    Text("还没有账号？立即注册")
-                        .font(.subheadline)
-                }
+                // 提示文字
+                Text("首次登录将自动创建账号")
+                    .font(.caption)
+                    .foregroundColor(.gray)
 
                 Spacer()
-            }
-            .sheet(isPresented: $showRegister) {
-                RegisterView()
-                    .environmentObject(authManager)
-            }
-        }
-    }
-}
-
-// MARK: - 注册视图
-struct RegisterView: View {
-    @EnvironmentObject var authManager: AuthManager
-    @Environment(\.dismiss) var dismiss
-    @State private var username = ""
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
-
-    var passwordMatch: Bool {
-        password == confirmPassword && !password.isEmpty
-    }
-
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                // 表单
-                VStack(spacing: 16) {
-                    TextField("用户名", text: $username)
-                        .textInputAutocapitalization(.never)
-                        .textFieldStyle(.roundedBorder)
-
-                    TextField("邮箱", text: $email)
-                        .textContentType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .textFieldStyle(.roundedBorder)
-
-                    SecureField("密码", text: $password)
-                        .textContentType(.newPassword)
-                        .textFieldStyle(.roundedBorder)
-
-                    SecureField("确认密码", text: $confirmPassword)
-                        .textContentType(.newPassword)
-                        .textFieldStyle(.roundedBorder)
-
-                    if !confirmPassword.isEmpty && !passwordMatch {
-                        Text("两次密码不一致")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
-                .padding(.horizontal)
-
-                // 错误提示
-                if let error = authManager.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-
-                // 注册按钮
-                Button {
-                    Task {
-                        await authManager.register(username: username, email: email, password: password)
-                        if authManager.isLoggedIn {
-                            dismiss()
-                        }
-                    }
-                } label: {
-                    if authManager.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    } else {
-                        Text("注册")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                }
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .disabled(authManager.isLoading || !passwordMatch || username.isEmpty || email.isEmpty)
-
-                Spacer()
-            }
-            .padding(.top)
-            .navigationTitle("注册")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
             }
         }
     }

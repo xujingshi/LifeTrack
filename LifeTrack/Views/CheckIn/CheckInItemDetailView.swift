@@ -503,14 +503,14 @@ struct ItemDayCell: View {
         !isFuture && !isBeforeCreation && !isCompleted && isAvailable
     }
 
-    // 是否有图片
+    // 是否有图片（记录模式下允许图片且有图片URL）
     private var hasImage: Bool {
-        item.checkTypeEnum == .withImage && record?.imageUrl != nil && !(record?.imageUrl ?? "").isEmpty
+        item.canAddImage && record?.imageUrl != nil && !(record?.imageUrl ?? "").isEmpty
     }
 
-    // 获取数值
+    // 获取数值（记录模式下且内容类型为数字）
     private var valueInfo: (value: Double, unit: String)? {
-        guard item.checkTypeEnum == .withValue, let value = record?.value else { return nil }
+        guard item.needsNumberInput, let value = record?.value else { return nil }
         return (value, item.valueUnit ?? "")
     }
 
@@ -670,8 +670,8 @@ struct SelectedDateRecordsSection: View {
                         }
                     }
 
-                    // 数值显示
-                    if item.checkTypeEnum == .withValue, let value = record.value {
+                    // 数值显示（记录模式且内容类型为数字）
+                    if item.needsNumberInput, let value = record.value {
                         HStack {
                             Text("记录数值")
                                 .font(.subheadline)
@@ -685,8 +685,20 @@ struct SelectedDateRecordsSection: View {
                         .padding(.top, 4)
                     }
 
-                    // 图片显示
-                    if item.checkTypeEnum == .withImage,
+                    // 文字内容显示（记录模式且内容类型为文字）
+                    if item.needsTextInput, let note = record.note, !note.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("记录内容")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            Text(note)
+                                .font(.body)
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    // 图片显示（记录模式且允许图片）
+                    if item.canAddImage,
                        let imageUrl = record.imageUrl, !imageUrl.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("打卡图片")
@@ -720,8 +732,8 @@ struct SelectedDateRecordsSection: View {
                         }
                     }
 
-                    // 备注
-                    if let note = record.note, !note.isEmpty {
+                    // 备注（非记录模式或数值类型的额外备注）
+                    if !item.needsTextInput, let note = record.note, !note.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("备注")
                                 .font(.subheadline)
@@ -789,6 +801,8 @@ struct SelectedDateRecordsSection: View {
             repeatDays: nil,
             intervalDays: 1,
             checkType: 0,
+            contentType: nil,
+            allowImage: nil,
             valueUnit: nil,
             isActive: true,
             createdAt: ""

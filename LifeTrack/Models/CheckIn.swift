@@ -12,8 +12,10 @@ struct CheckInItem: Codable, Identifiable {
     let repeatType: Int
     let repeatDays: String?
     let intervalDays: Int
-    let checkType: Int?      // 打卡类型: 0=普通, 1=图片, 2=数值
-    let valueUnit: String?   // 数值单位（当 checkType=2 时使用，如 "kg"、"步"）
+    let checkType: Int?       // 打卡类型: 0=默认打卡, 1=记录模式
+    let contentType: Int?     // 记录模式下: 0=字符串, 1=数字
+    let allowImage: Bool?     // 记录模式下是否允许图片
+    let valueUnit: String?    // 数值单位（当 contentType=1 时使用）
     let isActive: Bool
     let createdAt: String
 
@@ -29,6 +31,8 @@ struct CheckInItem: Codable, Identifiable {
         case repeatDays = "repeat_days"
         case intervalDays = "interval_days"
         case checkType = "check_type"
+        case contentType = "content_type"
+        case allowImage = "allow_image"
         case valueUnit = "value_unit"
         case isActive = "is_active"
         case createdAt = "created_at"
@@ -42,9 +46,33 @@ struct CheckInItem: Codable, Identifiable {
         CheckType(rawValue: checkType ?? 0) ?? .normal
     }
 
+    var contentTypeEnum: ContentType {
+        ContentType(rawValue: contentType ?? 0) ?? .text
+    }
+
     // 是否为自由打卡类型（不需要每天打卡）
     var isFreeType: Bool {
         repeatTypeEnum == .free
+    }
+
+    // 是否为记录模式
+    var isRecordMode: Bool {
+        checkTypeEnum == .record
+    }
+
+    // 是否需要数值输入
+    var needsNumberInput: Bool {
+        isRecordMode && contentTypeEnum == .number
+    }
+
+    // 是否需要文本输入
+    var needsTextInput: Bool {
+        isRecordMode && contentTypeEnum == .text
+    }
+
+    // 是否允许添加图片
+    var canAddImage: Bool {
+        isRecordMode && (allowImage ?? false)
     }
 }
 
@@ -81,31 +109,47 @@ enum RepeatType: Int, CaseIterable {
 
 // MARK: - 打卡类型
 enum CheckType: Int, CaseIterable {
-    case normal = 0      // 普通打卡
-    case withImage = 1   // 需要上传图片
-    case withValue = 2   // 需要记录数值（如体重）
+    case normal = 0      // 默认打卡（点击即完成）
+    case record = 1      // 记录模式
 
     var title: String {
         switch self {
-        case .normal: return "普通打卡"
-        case .withImage: return "图片打卡"
-        case .withValue: return "数值记录"
+        case .normal: return "默认打卡"
+        case .record: return "记录模式"
         }
     }
 
     var description: String {
         switch self {
         case .normal: return "点击即可完成打卡"
-        case .withImage: return "打卡时需要上传图片"
-        case .withValue: return "打卡时需要记录数值"
+        case .record: return "可记录文案/数值和图片"
         }
     }
 
     var icon: String {
         switch self {
         case .normal: return "checkmark.circle"
-        case .withImage: return "photo"
-        case .withValue: return "chart.bar.fill"
+        case .record: return "square.and.pencil"
+        }
+    }
+}
+
+// MARK: - 内容类型（记录模式下）
+enum ContentType: Int, CaseIterable {
+    case text = 0    // 字符串文案
+    case number = 1  // 数字
+
+    var title: String {
+        switch self {
+        case .text: return "文字"
+        case .number: return "数字"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .text: return "输入文字内容"
+        case .number: return "输入数值"
         }
     }
 }
@@ -186,6 +230,8 @@ struct CreateCheckInItemRequest: Codable {
     let repeatDays: String?
     let intervalDays: Int?
     let checkType: Int?
+    let contentType: Int?
+    let allowImage: Bool?
     let valueUnit: String?
 
     enum CodingKeys: String, CodingKey {
@@ -198,6 +244,8 @@ struct CreateCheckInItemRequest: Codable {
         case repeatDays = "repeat_days"
         case intervalDays = "interval_days"
         case checkType = "check_type"
+        case contentType = "content_type"
+        case allowImage = "allow_image"
         case valueUnit = "value_unit"
     }
 }

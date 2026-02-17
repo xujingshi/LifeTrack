@@ -51,7 +51,19 @@ class APIService {
         }
 
         let decoder = JSONDecoder()
-        let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
+
+        // 调试：打印原始响应
+        if let responseString = String(data: data, encoding: .utf8) {
+            logger.debug("API Response: \(responseString)")
+        }
+
+        let apiResponse: APIResponse<T>
+        do {
+            apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
+        } catch {
+            logger.error("JSON Decode Error: \(error)")
+            throw error
+        }
 
         if apiResponse.code != 0 {
             throw APIError.serverError(apiResponse.message)
@@ -216,6 +228,65 @@ class APIService {
             logger.error("uploadCheckinImage decode error: \(error)")
             throw APIError.serverError("JSON解码失败: \(error.localizedDescription)")
         }
+
+        if apiResponse.code != 0 {
+            throw APIError.serverError(apiResponse.message)
+        }
+
+        guard let responseData = apiResponse.data else {
+            throw APIError.noData
+        }
+
+        return responseData
+    }
+
+    // MARK: - 上传头像
+    func uploadAvatar(imageData: Data) async throws -> User {
+        guard let url = URL(string: APIConfig.fullURL + "/user/avatar") else {
+            throw APIError.invalidURL
+        }
+
+        let boundary = UUID().uuidString
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        if let token = token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let filename = "avatar_\(Int(Date().timeIntervalSince1970)).jpg"
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.networkError(NSError(domain: "", code: -1))
+        }
+
+        logger.debug("uploadAvatar statusCode: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            logger.debug("uploadAvatar response: \(responseString)")
+        }
+
+        if httpResponse.statusCode == 401 {
+            throw APIError.unauthorized
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
+            throw APIError.serverError("HTTP \(httpResponse.statusCode): \(errorMsg)")
+        }
+
+        let decoder = JSONDecoder()
+        let apiResponse = try decoder.decode(APIResponse<User>.self, from: data)
 
         if apiResponse.code != 0 {
             throw APIError.serverError(apiResponse.message)
