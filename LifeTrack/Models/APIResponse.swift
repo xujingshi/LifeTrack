@@ -24,7 +24,7 @@ struct PagedData<T: Codable>: Codable {
 
 // MARK: - API 配置
 struct APIConfig {
-    static let baseURL = "http://localhost:8080"
+    static let baseURL = "http://ruvision.cn/lifetrack"
     static let apiVersion = "/api/v1"
 
     static var fullURL: String {
